@@ -26,7 +26,7 @@ enum MappingError {
     NonUtf8ColumnName,
 }
 
-//
+
 pub struct XlogStreamMapper {
     /// Relation id to table info from replication `Relation` message.
     relations_map: HashMap<u32, Table>,
@@ -67,7 +67,7 @@ impl XlogStreamMapper {
                     };
                     // Is this a dumb hack? yes. Does it work? yes.
                     let (result, mapper2) =
-                        TokioRayonHandle::spawn(move || mapper.handle_message_owned(message)).await;
+                        TokioRayonHandle::spawn(move || mapper.handle_message_owned(&message)).await;
                     mapper = mapper2;
 
                     match result {
@@ -83,12 +83,12 @@ impl XlogStreamMapper {
     }
     pub fn handle_message_owned(
         mut self,
-        message: XLogDataBody<LogicalReplicationMessage>,
+        message: &XLogDataBody<LogicalReplicationMessage>,
     ) -> (
         Result<Option<OperationMessage>, PostgresConnectorError>,
         Self,
     ) {
-        (self.handle_message(&message), self)
+        (self.handle_message(message), self)
     }
     pub fn handle_message(
         &mut self,

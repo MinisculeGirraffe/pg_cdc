@@ -1,8 +1,5 @@
 # pg_cdc
 
-
-
-
 ## How it works
 
 [Logical replication](https://www.postgresql.org/docs/current/protocol-logical-replication.html) is used to ship changes in real time to this program as if we were a secondary database. We parse the postgres wire format and then map it to a generic representation that is serializable that we then replicate to various message queues.

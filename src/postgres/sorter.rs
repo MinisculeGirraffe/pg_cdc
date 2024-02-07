@@ -1,13 +1,19 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, hash::BuildHasher};
 
-use super::{schema::{FieldDefinition, ListOrFilterColumns, PostgresTable, SchemaTableIdentifier, DEFAULT_SCHEMA_NAME}, types::PostgresSchemaError};
+use super::{
+    schema::{
+        FieldDefinition, ListOrFilterColumns, PostgresTable, SchemaTableIdentifier,
+        DEFAULT_SCHEMA_NAME,
+    },
+    types::PostgresSchemaError,
+};
 
-pub fn sort_schemas(
+pub fn sort_schemas<S: BuildHasher>(
     expected_tables_order: &[ListOrFilterColumns],
-    mapped_tables: &HashMap<SchemaTableIdentifier, PostgresTable>,
+    mapped_tables: &HashMap<SchemaTableIdentifier, PostgresTable, S>,
 ) -> Result<Vec<(SchemaTableIdentifier, PostgresTable)>, PostgresSchemaError> {
     let mut sorted_tables: Vec<(SchemaTableIdentifier, PostgresTable)> = Vec::new();
-    for table in expected_tables_order.iter() {
+    for table in expected_tables_order {
         let table_identifier = (
             table
                 .schema

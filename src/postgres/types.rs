@@ -1,12 +1,9 @@
-use ordered_float::OrderedFloat;
-use postgres_protocol::Lsn;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, string::FromUtf8Error, time::Duration};
+use std::{collections::HashMap, string::FromUtf8Error};
 use thiserror::Error;
 use tokio_postgres::types::Type;
 
 use super::{field::Field, schema::CdcType, util::DateConversionError};
-
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Table {
@@ -46,7 +43,7 @@ pub struct OperationMessage {
 }
 
 impl OperationMessage {
-   pub fn nats_subject(&self) -> String {
+    pub fn nats_subject(&self) -> String {
         let table = &self.table;
 
         let op = match &self.operation {
@@ -75,7 +72,6 @@ pub enum Operation {
         new: HashMap<String, Field>,
     },
 }
-
 
 #[derive(Error, Debug)]
 pub enum PostgresSchemaError {

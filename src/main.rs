@@ -4,8 +4,7 @@
     clippy::missing_errors_doc,
     clippy::must_use_candidate
 )]
-use futures::{FutureExt, StreamExt};
-use tracing::info;
+use futures::StreamExt;
 use tracing_subscriber::EnvFilter;
 
 use crate::threadpool::TokioRayonHandle;

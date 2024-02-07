@@ -45,27 +45,27 @@ pub enum FieldType {
 }
 
 
-pub fn postgres_type_to_field_type(column_type: Type) -> Result<FieldType, PostgresSchemaError> {
+pub fn postgres_type_to_field_type(column_type: &Type) -> Result<FieldType, PostgresSchemaError> {
     match column_type {
-        Type::BOOL => Ok(FieldType::Boolean),
-        Type::INT2 | Type::INT4 | Type::INT8 => Ok(FieldType::Int),
-        Type::CHAR | Type::TEXT | Type::VARCHAR | Type::BPCHAR | Type::UUID | Type::ANYENUM => {
+        &Type::BOOL => Ok(FieldType::Boolean),
+        &Type::INT2 | &Type::INT4 | &Type::INT8 => Ok(FieldType::Int),
+        &Type::CHAR | &Type::TEXT | &Type::VARCHAR | &Type::BPCHAR | &Type::UUID | &Type::ANYENUM => {
             Ok(FieldType::String)
         }
-        Type::FLOAT4 | Type::FLOAT8 => Ok(FieldType::Float),
-        Type::BYTEA => Ok(FieldType::Binary),
-        Type::TIMESTAMP | Type::TIMESTAMPTZ => Ok(FieldType::Timestamp),
-        Type::NUMERIC => Ok(FieldType::Decimal),
-        Type::JSONB
-        | Type::JSON
-        | Type::JSONB_ARRAY
-        | Type::JSON_ARRAY
-        | Type::TEXT_ARRAY
-        | Type::CHAR_ARRAY
-        | Type::VARCHAR_ARRAY
-        | Type::BPCHAR_ARRAY => Ok(FieldType::Json),
-        Type::DATE => Ok(FieldType::Date),
-        Type::POINT => Ok(FieldType::Point),
+        &Type::FLOAT4 | &Type::FLOAT8 => Ok(FieldType::Float),
+        &Type::BYTEA => Ok(FieldType::Binary),
+        &Type::TIMESTAMP | &Type::TIMESTAMPTZ => Ok(FieldType::Timestamp),
+        &Type::NUMERIC => Ok(FieldType::Decimal),
+        &Type::JSONB
+        | &Type::JSON
+        | &Type::JSONB_ARRAY
+        | &Type::JSON_ARRAY
+        | &Type::TEXT_ARRAY
+        | &Type::CHAR_ARRAY
+        | &Type::VARCHAR_ARRAY
+        | &Type::BPCHAR_ARRAY => Ok(FieldType::Json),
+        &Type::DATE => Ok(FieldType::Date),
+        &Type::POINT => Ok(FieldType::Point),
         _ => Err(PostgresSchemaError::ColumnTypeNotSupported(
             column_type.name().to_string(),
         )),

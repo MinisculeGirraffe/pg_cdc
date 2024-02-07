@@ -65,10 +65,7 @@ impl LogicalReplicationStream {
             seq_no: 0,
         };
 
-        let stream = Self {
-            progress,
-            inner,
-        };
+        let stream = Self { progress, inner };
 
         let stream = futures::stream::unfold(stream, |mut stream| {
             Box::pin(async {
@@ -200,7 +197,9 @@ impl LogicalReplicationStream {
                 Utc.with_ymd_and_hms(2000, 1, 1, 0, 0, 0).unwrap(),
             ))
             .expect("Time went backwards")
-            .as_millis() as i64;
+            .as_millis()
+            .try_into()
+            .expect("Time is too large");
 
         self.standby_status_update(
             self.progress.last_commit_lsn.into(),

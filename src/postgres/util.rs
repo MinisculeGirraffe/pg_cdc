@@ -11,7 +11,7 @@ use thiserror::Error;
 use tokio_postgres::types::Type;
 
 use super::{
-    field::{Field},
+    field::Field,
     types::{PostgresSchemaError, TableColumn},
 };
 
@@ -119,7 +119,7 @@ pub enum DateConversionError {
     AmbiguousTimeResult,
 }
 
-pub fn convert_date(date: String) -> Result<NaiveDateTime, DateConversionError> {
+pub fn convert_date(date: &str) -> Result<NaiveDateTime, DateConversionError> {
     // Fill right side with zeros when date time is not full
     let date_string = format!("{date:0<26}");
 
@@ -186,14 +186,14 @@ pub fn postgres_type_to_field(
             let date_string = String::from_utf8(v.to_vec())?;
 
             Ok(Field::Timestamp(DateTime::from_naive_utc_and_offset(
-                convert_date(date_string)?,
+                convert_date(&date_string)?,
                 Utc.fix(),
             )))
         }
         Type::TIMESTAMPTZ => {
             let date_string = String::from_utf8(v.to_vec())?;
 
-            Ok(convert_date_with_timezone(date_string).map(Field::Timestamp)?)
+            Ok(convert_date_with_timezone(&date_string).map(Field::Timestamp)?)
         }
         Type::DATE => {
             let date: NaiveDate = NaiveDate::parse_from_str(
@@ -252,9 +252,9 @@ fn parse_point(point: &str) -> Result<geo::Point<OrderedFloat<f64>>, PostgresSch
     Ok(Point::from((OrderedFloat(x), OrderedFloat(y))))
 }
 
-/// This function converts any offset string (+03, +03:00 and etc) to FixedOffset
+/// This function converts any offset string (+03, +03:00 and etc) to `FixedOffset`
 ///
-fn parse_timezone_offset(offset_string: String) -> Result<Option<FixedOffset>, ParseIntError> {
+fn parse_timezone_offset(offset_string: &str) -> Result<Option<FixedOffset>, ParseIntError> {
     // Fill right side with zeros when offset is not full length
     let offset_string = format!("{offset_string:0<9}");
 
@@ -272,7 +272,7 @@ fn parse_timezone_offset(offset_string: String) -> Result<Option<FixedOffset>, P
     }
 }
 
-fn convert_date_with_timezone(date: String) -> Result<DateTime<FixedOffset>, DateConversionError> {
+fn convert_date_with_timezone(date: &str) -> Result<DateTime<FixedOffset>, DateConversionError> {
     // Find position of last + or -, which is the start of timezone offset
     let pos_plus = date.rfind('+');
     let pos_min = date.rfind('-');
@@ -291,9 +291,9 @@ fn convert_date_with_timezone(date: String) -> Result<DateTime<FixedOffset>, Dat
 
     let (date, offset_string) = date.split_at(pos);
 
-    let offset = parse_timezone_offset(offset_string.to_string())?.map_or(Utc.fix(), |x| x);
+    let offset = parse_timezone_offset(offset_string)?.map_or(Utc.fix(), |x| x);
 
-    match convert_date(date.to_string())?.and_local_timezone(offset) {
+    match convert_date(date)?.and_local_timezone(offset) {
         LocalResult::None => Err(DateConversionError::InvalidTime),
         LocalResult::Single(date) => Ok(date),
         LocalResult::Ambiguous(_, _) => Err(DateConversionError::AmbiguousTimeResult),

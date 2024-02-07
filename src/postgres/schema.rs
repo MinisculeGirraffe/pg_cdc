@@ -6,8 +6,10 @@ use tokio_postgres::{Client, Row};
 use crate::postgres::field::FieldType;
 
 use super::{
-    client, field::postgres_type_to_field_type, sorter::sort_schemas, types::{PostgresConnectorError, PostgresSchemaError}
-    
+    client,
+    field::postgres_type_to_field_type,
+    sorter::sort_schemas,
+    types::{PostgresConnectorError, PostgresSchemaError},
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Default)]
@@ -91,7 +93,7 @@ impl FieldDefinition {
         }
     }
 
-    pub fn check_from(&self, table_name: String) -> bool {
+    pub fn check_from(&self, table_name: &str) -> bool {
         match &self.source {
             SourceDefinition::Alias { name } | SourceDefinition::Table { name, .. } => {
                 *name == table_name
@@ -311,7 +313,7 @@ impl SchemaHelper {
                         columns.is_empty() || columns.contains(&column_name)
                     })
             })
-            .map(|r| self.convert_row(r))
+            .map(convert_row)
             .try_for_each(|table_row| -> Result<(), PostgresSchemaError> {
                 let row = table_row?;
                 columns_map
@@ -339,7 +341,7 @@ impl SchemaHelper {
         postgres_tables
             .into_iter()
             .map(|((_, table_name), table)| {
-                Self::map_schema(&table_name, table)
+                Self::map_schema(&table_name, &table)
                     .map_err(PostgresConnectorError::PostgresSchemaError)
             })
             .collect()
@@ -347,7 +349,7 @@ impl SchemaHelper {
 
     fn map_schema(
         table_name: &str,
-        table: PostgresTable,
+        table: &PostgresTable,
     ) -> Result<SourceSchema, PostgresSchemaError> {
         let primary_index: Vec<usize> = table
             .index_keys
@@ -396,48 +398,6 @@ impl SchemaHelper {
             Ok(())
         }
     }
-    fn convert_row(&self, row: &Row) -> Result<PostgresTableRow, PostgresSchemaError> {
-        let schema: String = row.get(8);
-        let table_name: String = row.get(0);
-        let table_type: Option<String> = row.get(7);
-        if let Some(typ) = table_type {
-            if typ != *"BASE TABLE" {
-                return Err(PostgresSchemaError::UnsupportedTableType(typ, table_name));
-            }
-        } else {
-            return Err(PostgresSchemaError::TableTypeNotFound);
-        }
-
-        let column_name: String = row.get(1);
-        let is_nullable: bool = row.get(2);
-        let is_column_used_in_index: bool = row.get(3);
-        let replication_type_int: i8 = row.get(5);
-        let type_oid: u32 = row.get(6);
-
-        // TODO: workaround - in case of custom enum
-        let typ = if type_oid == 28862 {
-            FieldType::String
-        } else {
-            let oid_typ = Type::from_oid(type_oid);
-            oid_typ.map_or_else(
-                || Err(PostgresSchemaError::InvalidColumnType(column_name.clone())),
-                postgres_type_to_field_type,
-            )?
-        };
-
-        let replication_type =
-            String::from_utf8(vec![replication_type_int as u8]).map_err(|_e| {
-                PostgresSchemaError::ValueConversionError("Replication type".to_string())
-            })?;
-
-        Ok(PostgresTableRow {
-            schema,
-            table_name,
-            field: FieldDefinition::new(column_name, typ, is_nullable, SourceDefinition::Dynamic),
-            is_column_used_in_index,
-            replication_type,
-        })
-    }
 }
 
 pub const DEFAULT_SCHEMA_NAME: &str = "public";
@@ -461,6 +421,50 @@ fn find_table(
             schema_table_identifier,
         ]))
     }
+}
+
+
+fn convert_row(row: &Row) -> Result<PostgresTableRow, PostgresSchemaError> {
+    let schema: String = row.get(8);
+    let table_name: String = row.get(0);
+    let table_type: Option<String> = row.get(7);
+    if let Some(typ) = table_type {
+        if typ != *"BASE TABLE" {
+            return Err(PostgresSchemaError::UnsupportedTableType(typ, table_name));
+        }
+    } else {
+        return Err(PostgresSchemaError::TableTypeNotFound);
+    }
+
+    let column_name: String = row.get(1);
+    let is_nullable: bool = row.get(2);
+    let is_column_used_in_index: bool = row.get(3);
+    let replication_type_int: i8 = row.get(5);
+    let type_oid: u32 = row.get(6);
+
+    // TODO: workaround - in case of custom enum
+    let typ = if type_oid == 28862 {
+        FieldType::String
+    } else {
+        let oid_typ = Type::from_oid(type_oid);
+        oid_typ.as_ref().map_or_else(
+            || Err(PostgresSchemaError::InvalidColumnType(column_name.clone())),
+            postgres_type_to_field_type,
+        )?
+    };
+
+    let replication_type =
+        String::from_utf8(vec![replication_type_int as u8]).map_err(|_e| {
+            PostgresSchemaError::ValueConversionError("Replication type".to_string())
+        })?;
+
+    Ok(PostgresTableRow {
+        schema,
+        table_name,
+        field: FieldDefinition::new(column_name, typ, is_nullable, SourceDefinition::Dynamic),
+        is_column_used_in_index,
+        replication_type,
+    })
 }
 
 const SQL: &str = "

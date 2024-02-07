@@ -11,7 +11,7 @@ pub mod sorter;
 pub mod types;
 pub mod util;
 pub mod validate;
-
+pub mod table_filter;
 pub const DB_PREFIX: &str = "pg_cdc_";
 
 #[derive(Debug, Error)]
